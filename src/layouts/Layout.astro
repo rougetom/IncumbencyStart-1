@@ -7,9 +7,22 @@ interface Props {
   title: string;
   description: string;
   noindex?: boolean;
+  /** Social share image, a path under public/. 1200×630 JPG works everywhere. */
+  image?: string;
+  imageAlt?: string;
 }
 
-const { title, description, noindex = false } = Astro.props;
+const {
+  title,
+  description,
+  noindex = false,
+  image = '/images/og-westminster.jpg',
+  imageAlt = 'Two people wearing black backpacks walk across Westminster Bridge towards the Houses of Parliament at sunset.',
+} = Astro.props;
+
+// Social scrapers need absolute URLs; building them from the request works on any domain or preview link.
+const pageUrl = new URL(Astro.url.pathname, Astro.url.origin).href;
+const imageUrl = new URL(image, Astro.url.origin).href;
 ---
 
 <!doctype html>
@@ -41,6 +54,24 @@ const { title, description, noindex = false } = Astro.props;
     <meta name="theme-color" content="#142b22" />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <title>{title}</title>
+    <link rel="canonical" href={pageUrl} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Incumbency.AI" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:image" content={imageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:alt" content={imageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageUrl} />
+    <meta name="twitter:image:alt" content={imageAlt} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preload" href="/fonts/sora-variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin />
