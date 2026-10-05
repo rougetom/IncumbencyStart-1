@@ -127,12 +127,30 @@ import Card from '../ui/Card.astro';
     line-height: 1.65;
   }
 
-  .hero__tags {
-    margin-top: 1.5rem;
-  }
-
+  /* Tags sit at the bottom of the form column, level with the end of the copy. */
   .hero__form {
     scroll-margin-top: 2rem;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero__tags {
+    container-type: inline-size;
+    margin-top: auto;
+    padding-top: 1.5rem;
+  }
+
+  /* Scaled to the column width so all three stay on one line. */
+  .hero__tags :global(.accreditation-tags) {
+    flex-wrap: nowrap;
+    gap: 2cqi;
+  }
+
+  .hero__tags :global(.tag) {
+    font-size: clamp(0.5rem, 2.25cqi, 0.75rem);
+    letter-spacing: 0.1em;
+    padding: 0.75em 1em;
   }
 
   @media (max-width: 960px) {
