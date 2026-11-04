@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="8" fill="#6c7bff"/>
-  <path d="M9 22V10l7 7 7-7v12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <rect width="32" height="32" rx="8" fill="#1b3c2f" />
+  <svg x="11.83" y="3.5" width="8.34" height="25" viewBox="1617.58 72.6 9.48 28.42" overflow="visible">
+    <path fill="none" stroke-width="2.08" stroke-linecap="butt" stroke-linejoin="round" stroke="#80edae" stroke-miterlimit="16" d="M -0 -0 L 3.7 -1.85 L 3.7 -6.01 L -0 -7.86 L -3.7 -6.01 L -3.7 -1.85 Z M -3.7 -10.37 L -0 -12.22 L 3.7 -10.37 L 3.7 -24.49 L -0 -26.34 L -3.7 -24.49 Z M -3.7 -10.37 " transform="matrix(1, 0, 0, -1, 1622.32, 73.64)"></path>
+  </svg>
 </svg>
