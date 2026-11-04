@@ -49,82 +49,6 @@ const stateId = `${id}-state`;
   <p class="field__error" id={errorId} hidden></p>
 </div>
 
-<style>
-  .combobox__control {
-    position: relative;
-  }
-
-  .combobox__list {
-    position: absolute;
-    z-index: 20;
-    top: calc(100% + 0.4rem);
-    left: 0;
-    right: 0;
-    margin: 0;
-    padding: 0.35rem;
-    list-style: none;
-    max-height: 17rem;
-    overflow-y: auto;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border-strong, var(--color-border));
-    border-radius: var(--radius-input);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-  }
-
-  .combobox__list[hidden] {
-    display: none;
-  }
-
-  .combobox__option {
-    padding: 0.7rem 0.85rem;
-    border-radius: calc(var(--radius-input) - 0.35rem);
-    font-size: 1rem;
-    color: var(--color-text);
-    cursor: pointer;
-    line-height: 1.35;
-  }
-
-  .combobox__option[aria-selected='true'],
-  .combobox__option:hover {
-    background: rgba(126, 232, 168, 0.14);
-  }
-
-  .combobox__option .combobox__meta {
-    display: block;
-    font-size: var(--text-small);
-    color: var(--color-text-subtle);
-  }
-
-  .combobox__empty {
-    padding: 0.7rem 0.85rem;
-    font-size: var(--text-small);
-    color: var(--color-text-subtle);
-  }
-
-  .combobox__state {
-    font-family: var(--font-mono);
-    font-size: var(--text-small);
-    color: var(--color-text-subtle);
-  }
-
-  .combobox__state[hidden] {
-    display: none;
-  }
-
-  .combobox__state.is-error {
-    color: var(--color-danger);
-  }
-
-  .combobox__retry {
-    margin-left: 0.5rem;
-    color: var(--color-accent);
-    background: none;
-    border: none;
-    font: inherit;
-    text-decoration: underline;
-    cursor: pointer;
-  }
-</style>
 
 <script>
   import type { Principal } from '../../lib/leads';
@@ -137,6 +61,14 @@ const stateId = `${id}-state`;
 
   function haystack(p: Principal) {
     return `${p.name} ${p.constituency ?? ''}`.toLowerCase();
+  }
+
+  // Up to two initials for the row avatar.
+  function initials(name: string) {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
   function setupCombobox(root: HTMLElement) {
@@ -154,6 +86,14 @@ const stateId = `${id}-state`;
     let shown: Principal[] = [];
     let active = -1;
     let loaded = false;
+    let selectedLabel: string | null = null;
+
+    // When the box still shows a committed selection, reopening lists everything
+    // rather than filtering by that label; once the visitor types, their text
+    // filters as usual.
+    function openQuery() {
+      return input.value === selectedLabel ? '' : input.value;
+    }
 
     function showState(message: string, isError: boolean, withRetry = false) {
       state.textContent = message;
@@ -208,13 +148,32 @@ const stateId = `${id}-state`;
           li.setAttribute('role', 'option');
           li.setAttribute('aria-selected', 'false');
           li.dataset.id = p.id;
-          li.textContent = p.name;
+          if (p.id === value.value) li.classList.add('is-chosen');
+
+          const avatar = document.createElement('span');
+          avatar.className = 'combobox__avatar';
+          avatar.setAttribute('aria-hidden', 'true');
+          avatar.textContent = initials(p.name);
+
+          const content = document.createElement('span');
+          content.className = 'combobox__text';
+          const name = document.createElement('span');
+          name.className = 'combobox__name';
+          name.textContent = p.name;
+          content.append(name);
           if (p.constituency) {
             const meta = document.createElement('span');
             meta.className = 'combobox__meta';
-            meta.textContent = p.constituency + (p.party ? ` · ${p.party}` : '');
-            li.append(meta);
+            meta.textContent = p.constituency;
+            content.append(meta);
           }
+
+          const check = document.createElement('span');
+          check.className = 'combobox__check';
+          check.setAttribute('aria-hidden', 'true');
+          check.textContent = '✓';
+
+          li.append(avatar, content, check);
           li.addEventListener('mousedown', (e) => {
             e.preventDefault();
             select(i);
@@ -240,6 +199,7 @@ const stateId = `${id}-state`;
       const p = shown[index];
       if (!p) return;
       input.value = optionLabel(p);
+      selectedLabel = input.value;
       value.value = p.id;
       clearError();
       close();
@@ -264,11 +224,16 @@ const stateId = `${id}-state`;
     }
 
     input.addEventListener('focus', () => {
-      if (loaded) render(input.value);
+      if (loaded) render(openQuery());
+    });
+
+    input.addEventListener('click', () => {
+      if (loaded && list.hidden) render(openQuery());
     });
 
     input.addEventListener('input', () => {
       // Editing invalidates any previous selection until one is picked again.
+      selectedLabel = null;
       value.value = '';
       clearError();
       if (loaded) render(input.value);
@@ -277,11 +242,11 @@ const stateId = `${id}-state`;
     input.addEventListener('keydown', (event) => {
       if (event.key === 'ArrowDown') {
         event.preventDefault();
-        if (list.hidden) render(input.value);
+        if (list.hidden) render(openQuery());
         highlight(active + 1);
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
-        if (list.hidden) render(input.value);
+        if (list.hidden) render(openQuery());
         highlight(active - 1);
       } else if (event.key === 'Enter') {
         if (!list.hidden && active >= 0) {
