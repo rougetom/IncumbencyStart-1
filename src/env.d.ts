@@ -2,12 +2,11 @@
 /// <reference types="astro/client" />
 
 interface ImportMetaEnv {
-  readonly RESEND_API_KEY: string;
-  readonly RESEND_FROM_EMAIL: string;
-  readonly CONTACT_TO_EMAIL: string;
-  readonly MAILCHIMP_API_KEY: string;
-  readonly MAILCHIMP_SERVER_PREFIX: string;
-  readonly MAILCHIMP_AUDIENCE_ID: string;
+  /** CRM base URL, e.g. https://crm.incumbency.ai */
+  readonly CRM_BASE_URL: string;
+  /** HMAC secret shared with the CRM lead webhook. Server only. */
+  readonly LEADS_WEBHOOK_SECRET: string;
+  /** GA4 Measurement Protocol secret. Optional: records successful submissions. */
   readonly GA_API_SECRET?: string;
 }
 

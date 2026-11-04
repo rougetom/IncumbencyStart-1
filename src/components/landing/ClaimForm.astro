@@ -1,25 +1,52 @@
 ---
 import Field from '../ui/Field.astro';
 import Button from '../ui/Button.astro';
+import Combobox from '../ui/Combobox.astro';
+import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
 ---
 
 <form id="claim-form" class="claim-form" novalidate>
   <div class="span-2">
-    <Field label="Full name" name="name" placeholder="Jane Okafor" autocomplete="name" required />
+    <Field label="Full name" name="full_name" placeholder="Jane Okafor" autocomplete="name" required />
   </div>
-  <Field label="Mobile" name="mobile" type="tel" placeholder="07700 000000" autocomplete="tel" inputmode="tel" required />
-  <div class="claim-form__office">
-    <Field label="MP's office" name="office" placeholder="MP's Office" autocomplete="organization" required />
-  </div>
-  <div class="span-2 claim-form__email">
+
+  <Field label="Mobile" name="mobile" type="tel" placeholder="07700 900000" autocomplete="tel" inputmode="tel" required />
+  <div class="claim-form__email">
     <Field label="Email" name="email" type="email" placeholder="jane.okafor@parliament.uk" autocomplete="email" required />
   </div>
+
+  <div class="span-2">
+    <div class="field" data-field="job_title">
+      <label class="field__label" for="field-job_title">Job title</label>
+      <div class="select">
+        <select class="field__input select__control" id="field-job_title" name="job_title" required aria-describedby="field-job_title-error">
+          <option value="" disabled selected hidden>Choose your role</option>
+          {JOB_TITLES.map((title) => <option value={title}>{title}</option>)}
+          <option value={OTHER_JOB_TITLE}>{OTHER_JOB_TITLE}</option>
+        </select>
+      </div>
+      <p class="field__error" id="field-job_title-error" hidden></p>
+    </div>
+  </div>
+
+  <div class="span-2 claim-form__other" data-other hidden>
+    <Field label="Your job title" name="job_title_other" placeholder="e.g. Policy Adviser" autocomplete="organization-title" />
+  </div>
+
+  <div class="span-2">
+    <Combobox label="MP's office" name="principal_id" id="field-principal_id" />
+  </div>
+
+  <!-- Honeypot: hidden from people, tempting to bots. A value means "bot". -->
+  <div class="claim-form__hp" aria-hidden="true">
+    <label for="field-website">Website</label>
+    <input id="field-website" type="text" name="website" tabindex="-1" autocomplete="off" />
+  </div>
+
   <div class="span-2 claim-form__submit">
     <Button type="submit" icon="arrow-right" block>Activate account</Button>
   </div>
-  <p class="span-2 claim-form__note">
-    By claiming, you agree to hear from Incumbency.AI about your bag and our platform. Unsubscribe any time.
-  </p>
+  <p class="span-2 claim-form__note">{CONSENT_TEXT}</p>
   <p id="claim-status" class="span-2 claim-form__status" role="status" aria-live="polite"></p>
 </form>
 
@@ -60,7 +87,52 @@ import Button from '../ui/Button.astro';
     color: var(--color-danger);
   }
 
-  /* Success state: the submit button briefly confirms the claim. */
+  .claim-form__other[hidden] {
+    display: none;
+  }
+
+  /* Native select, styled to match the text inputs, with a chevron. */
+  .select {
+    position: relative;
+  }
+
+  .select__control {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2.75rem;
+    cursor: pointer;
+  }
+
+  .select__control:invalid {
+    color: var(--color-text-subtle);
+  }
+
+  .select::after {
+    content: '';
+    position: absolute;
+    right: 1.1rem;
+    top: 50%;
+    width: 0.7rem;
+    height: 0.7rem;
+    transform: translateY(-60%) rotate(45deg);
+    border-right: 2px solid var(--color-text-muted);
+    border-bottom: 2px solid var(--color-text-muted);
+    pointer-events: none;
+  }
+
+  /* Honeypot: kept in the DOM and the accessibility tree out of bots' way,
+     but never shown to or reachable by a real visitor. */
+  .claim-form__hp {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Success state: the submit button briefly confirms the submission. */
   @keyframes claimed-pop {
     40% {
       transform: scale(1.02);
@@ -86,36 +158,121 @@ import Button from '../ui/Button.astro';
     .span-2 {
       grid-column: auto;
     }
-
-    /* Single column: email comes before MP's office. */
-    .claim-form__email {
-      order: 1;
-    }
-
-    .claim-form__office {
-      order: 2;
-    }
-
-    .claim-form__email ~ * {
-      order: 3;
-    }
   }
 </style>
 
 <script>
-  import { CLAIM_FIELDS, validateClaim, type ClaimErrors, type ClaimField } from '../../lib/claim-validation';
+  import { LEAD_FIELDS, validateLead, type LeadField } from '../../lib/leads';
   import { ANALYTICS_ID, CONSENT_KEY } from '../../lib/site';
 
   const form = document.getElementById('claim-form') as HTMLFormElement | null;
   const status = document.getElementById('claim-status');
+  const otherWrap = form?.querySelector<HTMLElement>('[data-other]') ?? null;
+  const jobTitle = form?.querySelector<HTMLSelectElement>('select[name="job_title"]') ?? null;
 
-  function input(name: ClaimField) {
-    return form?.querySelector<HTMLInputElement>(`input[name="${name}"]`) ?? null;
+  // Each field's error <p> and wrapper follow "field-<name>" by convention.
+  function controlFor(name: LeadField) {
+    if (name === 'principal_id') return document.getElementById('field-principal_id-input');
+    return form?.querySelector<HTMLElement>(`[name="${name}"]`) ?? null;
   }
 
-  // For visitors who accepted analytics cookies, pass their GA ids along so the
-  // server can tie the claim to their visit. Everyone else sends none and is
-  // counted anonymously.
+  function setFieldError(name: LeadField, message: string | null) {
+    const error = document.getElementById(`field-${name}-error`);
+    const wrapper = error?.closest('.field') ?? null;
+    const control = controlFor(name);
+    if (!error) return;
+    wrapper?.classList.toggle('field--error', Boolean(message));
+    error.textContent = message ?? '';
+    error.hidden = !message;
+    if (control) {
+      if (message) control.setAttribute('aria-invalid', 'true');
+      else control.removeAttribute('aria-invalid');
+    }
+  }
+
+  function showErrors(errors: Partial<Record<LeadField, string>>) {
+    LEAD_FIELDS.forEach((name) => setFieldError(name, errors[name] ?? null));
+    const first = LEAD_FIELDS.find((name) => errors[name]);
+    if (first) controlFor(first)?.focus();
+  }
+
+  function readFields(): Record<LeadField, string> {
+    const get = (name: string) => {
+      const el = form?.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`);
+      return el?.value ?? '';
+    };
+    return Object.fromEntries(LEAD_FIELDS.map((name) => [name, get(name)])) as Record<LeadField, string>;
+  }
+
+  // Reveal the free-text job title only when "Other" is picked.
+  function syncOther() {
+    const isOther = jobTitle?.value === 'Other';
+    if (otherWrap) otherWrap.hidden = !isOther;
+    if (!isOther) setFieldError('job_title_other', null);
+  }
+  jobTitle?.addEventListener('change', () => {
+    syncOther();
+    setFieldError('job_title', null);
+  });
+  syncOther();
+
+  LEAD_FIELDS.forEach((name) => controlFor(name)?.addEventListener('input', () => setFieldError(name, null)));
+
+  // --- Attribution (UTM etc.), gated on analytics consent -------------------
+  const ATTR_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'li_fat_id'];
+  const FIRST_TOUCH_KEY = 'first_touch';
+
+  function consentGranted() {
+    try {
+      return localStorage.getItem(CONSENT_KEY) === 'granted';
+    } catch {
+      return false;
+    }
+  }
+
+  function campaignParams() {
+    const params = new URLSearchParams(location.search);
+    const out: Record<string, string> = {};
+    for (const key of ATTR_KEYS) {
+      const v = params.get(key);
+      if (v) out[key] = v;
+    }
+    return out;
+  }
+
+  // Store the first campaign landing once, never overwriting it.
+  function captureFirstTouch() {
+    if (!consentGranted()) return;
+    try {
+      if (localStorage.getItem(FIRST_TOUCH_KEY)) return;
+      const params = campaignParams();
+      if (Object.keys(params).length === 0) return;
+      const touch: Record<string, string> = { ...params, landing_url: location.href, occurred_at: new Date().toISOString() };
+      if (document.referrer) touch.referrer = document.referrer;
+      localStorage.setItem(FIRST_TOUCH_KEY, JSON.stringify(touch));
+    } catch {
+      // Storage blocked: skip attribution.
+    }
+  }
+
+  function touches() {
+    if (!consentGranted()) return {};
+    const out: { first_touch?: unknown; last_touch?: unknown } = {};
+    try {
+      const stored = localStorage.getItem(FIRST_TOUCH_KEY);
+      if (stored) out.first_touch = JSON.parse(stored);
+    } catch {
+      // ignore
+    }
+    const last: Record<string, string> = { ...campaignParams(), landing_url: location.href, occurred_at: new Date().toISOString() };
+    if (document.referrer) last.referrer = document.referrer;
+    out.last_touch = last;
+    return out;
+  }
+
+  captureFirstTouch();
+
+  // --- Google Analytics ids, only for visitors who accepted cookies ---------
   function analyticsGet(field: 'client_id' | 'session_id') {
     const w = window as any;
     return new Promise<string | undefined>((resolve) => {
@@ -129,41 +286,12 @@ import Button from '../ui/Button.astro';
 
   async function analyticsIds() {
     const w = window as any;
-    let consented = false;
-    try {
-      consented = localStorage.getItem(CONSENT_KEY) === 'granted';
-    } catch {
-      // Storage blocked: treat as no consent.
-    }
-    if (!consented || !w.analyticsLoaded || typeof w.gtag !== 'function') return undefined;
+    if (!consentGranted() || !w.analyticsLoaded || typeof w.gtag !== 'function') return undefined;
     const [clientId, sessionId] = await Promise.all([analyticsGet('client_id'), analyticsGet('session_id')]);
     return { clientId, sessionId };
   }
 
-  function setFieldError(name: ClaimField, message: string | null) {
-    const el = input(name);
-    const error = el ? document.getElementById(`${el.id}-error`) : null;
-    if (!el || !error) return;
-    el.closest('.field')?.classList.toggle('field--error', Boolean(message));
-    error.textContent = message ?? '';
-    error.hidden = !message;
-    if (message) {
-      el.setAttribute('aria-invalid', 'true');
-      el.setAttribute('aria-describedby', error.id);
-    } else {
-      el.removeAttribute('aria-invalid');
-      el.removeAttribute('aria-describedby');
-    }
-  }
-
-  function showErrors(errors: ClaimErrors) {
-    CLAIM_FIELDS.forEach((name) => setFieldError(name, errors[name] ?? null));
-    const first = CLAIM_FIELDS.find((name) => errors[name]);
-    if (first) input(first)?.focus();
-  }
-
-  CLAIM_FIELDS.forEach((name) => input(name)?.addEventListener('input', () => setFieldError(name, null)));
-
+  // --- Submit ---------------------------------------------------------------
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!status) return;
@@ -178,19 +306,20 @@ import Button from '../ui/Button.astro';
     status.classList.remove('is-error');
     status.textContent = '';
 
-    const formData = new FormData(form);
-    const { claim, errors } = validateClaim(Object.fromEntries(CLAIM_FIELDS.map((name) => [name, formData.get(name)])));
+    const fields = readFields();
+    const { lead, errors } = validateLead(fields);
     showErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (!lead) return;
 
     button?.setAttribute('disabled', 'true');
-    if (label) label.textContent = 'Sending…';
+    if (label) label.textContent = 'Activating…';
 
     try {
+      const honeypot = form.querySelector<HTMLInputElement>('input[name="website"]')?.value ?? '';
       const response = await fetch('/api/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...claim, analytics: await analyticsIds() }),
+        body: JSON.stringify({ ...fields, website: honeypot, ...touches(), analytics: await analyticsIds() }),
       });
       const data = await response.json();
 
@@ -202,6 +331,12 @@ import Button from '../ui/Button.astro';
       succeeded = true;
       status.textContent = "Thanks — your account is being activated. We'll be in touch shortly.";
       form.reset();
+      syncOther();
+      // Clear the combobox's visible text and hidden id, which form.reset misses.
+      const mpInput = document.getElementById('field-principal_id-input') as HTMLInputElement | null;
+      const mpValue = document.getElementById('field-principal_id-value') as HTMLInputElement | null;
+      if (mpInput) mpInput.value = '';
+      if (mpValue) mpValue.value = '';
       button?.classList.add('is-success');
       if (label) label.textContent = 'Activated';
       if (icon) icon.textContent = '✓';
