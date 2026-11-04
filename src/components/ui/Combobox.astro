@@ -26,6 +26,10 @@ const stateId = `${id}-state`;
 <div class="field combobox" data-combobox data-endpoint={endpoint}>
   <label class="field__label" id={`${id}-label`} for={`${id}-input`}>{label}</label>
   <div class="combobox__control">
+    <svg class="combobox__search" viewBox="0 0 20 20" fill="none" aria-hidden="true" data-combobox-search>
+      <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.8" />
+      <line x1="13.5" y1="13.5" x2="17.5" y2="17.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </svg>
     <input
       class="field__input combobox__input"
       id={`${id}-input`}
@@ -55,32 +59,21 @@ const stateId = `${id}-state`;
 
   const MAX_OPTIONS = 50;
 
-  function optionLabel(p: Principal) {
-    return p.constituency ? `${p.name} — ${p.constituency}` : p.name;
-  }
-
   function haystack(p: Principal) {
     return `${p.name} ${p.constituency ?? ''}`.toLowerCase();
-  }
-
-  // Up to two initials for the row avatar.
-  function initials(name: string) {
-    const parts = name.trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return '?';
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
   function setupCombobox(root: HTMLElement) {
     const endpoint = root.dataset.endpoint || '/api/principals';
     // Assert non-null (checked at runtime just below) so the nested closures
     // see non-null types — TS doesn't carry a guard's narrowing into them.
+    const control = root.querySelector<HTMLDivElement>('.combobox__control')!;
     const input = root.querySelector<HTMLInputElement>('[data-combobox-input]')!;
     const list = root.querySelector<HTMLUListElement>('[data-combobox-list]')!;
     const value = root.querySelector<HTMLInputElement>('[data-combobox-value]')!;
     const state = root.querySelector<HTMLParagraphElement>('[data-combobox-state]')!;
     const error = root.querySelector<HTMLParagraphElement>('.field__error');
-    if (!input || !list || !value || !state) return;
+    if (!control || !input || !list || !value || !state) return;
 
     let all: Principal[] = [];
     let shown: Principal[] = [];
@@ -126,6 +119,7 @@ const stateId = `${id}-state`;
     function close() {
       list.hidden = true;
       input.setAttribute('aria-expanded', 'false');
+      control.classList.remove('is-open');
       active = -1;
     }
 
@@ -150,11 +144,6 @@ const stateId = `${id}-state`;
           li.dataset.id = p.id;
           if (p.id === value.value) li.classList.add('is-chosen');
 
-          const avatar = document.createElement('span');
-          avatar.className = 'combobox__avatar';
-          avatar.setAttribute('aria-hidden', 'true');
-          avatar.textContent = initials(p.name);
-
           const content = document.createElement('span');
           content.className = 'combobox__text';
           const name = document.createElement('span');
@@ -173,7 +162,7 @@ const stateId = `${id}-state`;
           check.setAttribute('aria-hidden', 'true');
           check.textContent = '✓';
 
-          li.append(avatar, content, check);
+          li.append(content, check);
           li.addEventListener('mousedown', (e) => {
             e.preventDefault();
             select(i);
@@ -183,6 +172,7 @@ const stateId = `${id}-state`;
       }
       list.hidden = false;
       input.setAttribute('aria-expanded', 'true');
+      control.classList.add('is-open');
     }
 
     function highlight(next: number) {
@@ -198,8 +188,10 @@ const stateId = `${id}-state`;
     function select(index: number) {
       const p = shown[index];
       if (!p) return;
-      input.value = optionLabel(p);
-      selectedLabel = input.value;
+      // The box shows only the MP's name once chosen; the dropdown still shows
+      // name + constituency.
+      input.value = p.name;
+      selectedLabel = p.name;
       value.value = p.id;
       clearError();
       close();
