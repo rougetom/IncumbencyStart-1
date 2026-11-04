@@ -200,10 +200,10 @@ import Button from '../ui/Button.astro';
       }
 
       succeeded = true;
-      status.textContent = "Thanks — your bag is claimed. We'll be in touch shortly.";
+      status.textContent = "Thanks — your account is being activated. We'll be in touch shortly.";
       form.reset();
       button?.classList.add('is-success');
-      if (label) label.textContent = 'Claimed';
+      if (label) label.textContent = 'Activated';
       if (icon) icon.textContent = '✓';
       window.setTimeout(() => {
         button?.classList.remove('is-success');
