@@ -8,7 +8,12 @@ const { href = '/', size = 'md' } = Astro.props;
 ---
 
 <a class:list={['logo', `logo--${size}`]} href={href} aria-label="Incumbency.AI home">
-  <span class="logo__word">Incumbency</span><span class="logo__suffix">.AI</span>
+  <svg class="logo__mark" viewBox="0 0 96 143" fill="none" aria-hidden="true" focusable="false">
+    <g stroke="currentColor" stroke-width="14" stroke-linejoin="round" stroke-linecap="round">
+      <polygon points="48,8 65.32,18 65.32,38 48,48 30.68,38 30.68,18" />
+      <path d="M31,74 Q31,66 39,66 L57,66 Q65,66 65,74 L65,120 L48,134 L31,120 Z" />
+    </g>
+  </svg><span class="logo__word">ncumbency</span><span class="logo__suffix">.AI</span>
 </a>
 
 <style>
@@ -18,7 +23,7 @@ const { href = '/', size = 'md' } = Astro.props;
     font-family: var(--font-title);
     font-weight: 600;
     letter-spacing: -0.03em;
-    color: var(--color-text);
+    color: var(--color-accent);
     text-decoration: none;
     font-size: 1.1875rem;
     line-height: 1;
@@ -28,8 +33,22 @@ const { href = '/', size = 'md' } = Astro.props;
     font-size: 1.75rem;
   }
 
+  .logo__mark {
+    height: 1.2em;
+    width: auto;
+    /* The mark is the "i": its stem sits on the baseline, the hexagon rides
+       above like the dot. */
+    align-self: baseline;
+    transform: translateY(0.06em);
+    margin-right: 0.04em;
+    color: var(--color-accent);
+  }
+
+  .logo__word {
+    color: var(--color-accent);
+  }
+
   .logo__suffix {
-    font-weight: 300;
     color: var(--color-gold);
   }
 </style>
