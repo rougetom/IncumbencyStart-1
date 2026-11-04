@@ -15,7 +15,7 @@ import Button from '../ui/Button.astro';
     <Field label="Email" name="email" type="email" placeholder="jane.okafor@parliament.uk" autocomplete="email" required />
   </div>
   <div class="span-2 claim-form__submit">
-    <Button type="submit" icon="arrow-right" block>Get my bag</Button>
+    <Button type="submit" icon="arrow-right" block>Activate account</Button>
   </div>
   <p class="span-2 claim-form__note">
     By claiming, you agree to hear from Incumbency.AI about your bag and our platform. Unsubscribe any time.
@@ -200,10 +200,10 @@ import Button from '../ui/Button.astro';
       }
 
       succeeded = true;
-      status.textContent = "Thanks — your bag is claimed. We'll be in touch shortly.";
+      status.textContent = "Thanks — your account is being activated. We'll be in touch shortly.";
       form.reset();
       button?.classList.add('is-success');
-      if (label) label.textContent = 'Claimed';
+      if (label) label.textContent = 'Activated';
       if (icon) icon.textContent = '✓';
       window.setTimeout(() => {
         button?.classList.remove('is-success');
