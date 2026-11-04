@@ -14,4 +14,23 @@ import Logo from '../ui/Logo.astro';
     z-index: 1;
     padding-block: 2rem;
   }
+
+  /* Soft top scrim so the logo keeps contrast over the brightest part of the
+     bokeh. Darkest at the very top, fading out below the header. */
+  .site-header::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: 0;
+    right: 0;
+    top: -1rem;
+    bottom: -3rem;
+    background: linear-gradient(
+      180deg,
+      rgba(7, 19, 15, 0.7) 0%,
+      rgba(7, 19, 15, 0.45) 40%,
+      rgba(7, 19, 15, 0) 100%
+    );
+    pointer-events: none;
+  }
 </style>
