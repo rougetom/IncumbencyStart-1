@@ -7,10 +7,11 @@ import { SEGMENT, type Principal, type Touch } from './leads';
 
 const PRINCIPAL_KEYS = ['id', 'name', 'party', 'constituency', 'region'] as const;
 
+/** Production CRM, used when CRM_BASE_URL isn't set (e.g. staging overrides it). */
+const DEFAULT_CRM_BASE_URL = 'https://crm.incumbency.ai';
+
 function base(): string {
-  const url = env('CRM_BASE_URL');
-  if (!url) throw new Error('CRM_BASE_URL is not set');
-  return url.replace(/\/+$/, '');
+  return (env('CRM_BASE_URL') ?? DEFAULT_CRM_BASE_URL).replace(/\/+$/, '');
 }
 
 /** Keep only the known string fields from an untrusted principal record. */

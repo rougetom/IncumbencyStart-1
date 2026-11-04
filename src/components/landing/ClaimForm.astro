@@ -15,26 +15,22 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
     <Field label="Email" name="email" type="email" placeholder="jane.okafor@parliament.uk" autocomplete="email" required />
   </div>
 
-  <div class="span-2">
-    <div class="field" data-field="job_title">
-      <label class="field__label" for="field-job_title">Job title</label>
-      <div class="select">
-        <select class="field__input select__control" id="field-job_title" name="job_title" required aria-describedby="field-job_title-error">
-          <option value="" disabled selected hidden>Choose your role</option>
-          {JOB_TITLES.map((title) => <option value={title}>{title}</option>)}
-          <option value={OTHER_JOB_TITLE}>{OTHER_JOB_TITLE}</option>
-        </select>
-      </div>
-      <p class="field__error" id="field-job_title-error" hidden></p>
+  <div class="field" data-field="job_title">
+    <label class="field__label" for="field-job_title">Job title</label>
+    <div class="select">
+      <select class="field__input select__control" id="field-job_title" name="job_title" required aria-describedby="field-job_title-error">
+        <option value="" disabled selected hidden>Choose your role</option>
+        {JOB_TITLES.map((title) => <option value={title}>{title}</option>)}
+        <option value={OTHER_JOB_TITLE}>{OTHER_JOB_TITLE}</option>
+      </select>
     </div>
+    <p class="field__error" id="field-job_title-error" hidden></p>
   </div>
+
+  <Combobox label="MP's office" name="principal_id" id="field-principal_id" />
 
   <div class="span-2 claim-form__other" data-other hidden>
     <Field label="Your job title" name="job_title_other" placeholder="e.g. Policy Adviser" autocomplete="organization-title" />
-  </div>
-
-  <div class="span-2">
-    <Combobox label="MP's office" name="principal_id" id="field-principal_id" />
   </div>
 
   <!-- Honeypot: hidden from people, tempting to bots. A value means "bot". -->

@@ -15,7 +15,8 @@ import { missing } from '../../lib/server-env';
 
 export const prerender = false;
 
-const REQUIRED_VARS = ['CRM_BASE_URL', 'LEADS_WEBHOOK_SECRET'] as const;
+// CRM_BASE_URL has a production default, so only the signing secret is required.
+const REQUIRED_VARS = ['LEADS_WEBHOOK_SECRET'] as const;
 
 function json(body: Record<string, unknown>, status: number) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
