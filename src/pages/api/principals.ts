@@ -13,7 +13,11 @@ export const GET: APIRoute = async () => {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400',
+        // The MP list barely changes, so cache it hard. The Vercel edge serves
+        // the cached copy for a day (s-maxage) and keeps serving the old one for
+        // up to a week while it revalidates in the background, so the CRM is
+        // hit ~once a day per region, never on an ordinary visit.
+        'Cache-Control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800',
       },
     });
   } catch (error) {
