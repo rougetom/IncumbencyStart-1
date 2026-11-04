@@ -350,8 +350,13 @@ img {
     position: absolute;
     z-index: 20;
     top: calc(100% + 0.4rem);
-    left: 0;
+    /* Anchored to the field's right edge and grown leftward, so a list wide
+       enough for full MP names never runs off the right of the screen. */
     right: 0;
+    left: auto;
+    min-width: 100%;
+    width: max-content;
+    max-width: min(34rem, 92vw);
     margin: 0;
     padding: 0.35rem;
     list-style: none;
@@ -361,6 +366,28 @@ img {
     border: 1px solid var(--color-border-strong, var(--color-border));
     border-radius: var(--radius-input);
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Search affordance: shown only while the list is open. */
+  .combobox__search {
+    position: absolute;
+    left: 1.05rem;
+    top: 50%;
+    width: 1.1rem;
+    height: 1.1rem;
+    transform: translateY(-50%);
+    color: var(--color-text-subtle);
+    opacity: 0;
+    transition: opacity var(--transition);
+    pointer-events: none;
+  }
+
+  .combobox__control.is-open .combobox__search {
+    opacity: 1;
+  }
+
+  .combobox__control.is-open .combobox__input {
+    padding-left: 2.8rem;
   }
 
   .combobox__list[hidden] {
@@ -381,21 +408,6 @@ img {
     background: rgba(126, 232, 168, 0.14);
   }
 
-  .combobox__avatar {
-    flex: none;
-    width: 2.1rem;
-    height: 2.1rem;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    color: var(--color-accent);
-    background: var(--color-accent-soft);
-  }
-
   .combobox__text {
     display: flex;
     flex-direction: column;
@@ -408,8 +420,6 @@ img {
     color: var(--color-text);
     line-height: 1.25;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .combobox__meta {
@@ -417,8 +427,6 @@ img {
     color: var(--color-text-subtle);
     line-height: 1.2;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .combobox__check {
