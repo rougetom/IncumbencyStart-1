@@ -1,0 +1,305 @@
+---
+// Searchable combobox backed by the CRM MP list (/api/principals). Submits the
+// selected principal's id via a hidden input named `name`. Requires JS, like
+// the rest of the form.
+type Props = {
+  label: string;
+  name: string;
+  id?: string;
+  endpoint?: string;
+  placeholder?: string;
+};
+
+const {
+  label,
+  name,
+  id = `combobox-${name}`,
+  endpoint = '/api/principals',
+  placeholder = 'Search by name or constituency',
+} = Astro.props;
+
+const errorId = `${id}-error`;
+const listId = `${id}-list`;
+const stateId = `${id}-state`;
+---
+
+<div class="field combobox" data-combobox data-endpoint={endpoint}>
+  <label class="field__label" id={`${id}-label`} for={`${id}-input`}>{label}</label>
+  <div class="combobox__control">
+    <input
+      class="field__input combobox__input"
+      id={`${id}-input`}
+      type="text"
+      role="combobox"
+      aria-expanded="false"
+      aria-autocomplete="list"
+      aria-controls={listId}
+      aria-labelledby={`${id}-label`}
+      aria-describedby={errorId}
+      autocomplete="off"
+      autocapitalize="none"
+      spellcheck="false"
+      placeholder={placeholder}
+      data-combobox-input
+    />
+    <ul class="combobox__list" id={listId} role="listbox" aria-labelledby={`${id}-label`} data-combobox-list hidden></ul>
+  </div>
+  <input type="hidden" name={name} id={`${id}-value`} data-combobox-value />
+  <p class="combobox__state" id={stateId} role="status" aria-live="polite" data-combobox-state hidden></p>
+  <p class="field__error" id={errorId} hidden></p>
+</div>
+
+<style>
+  .combobox__control {
+    position: relative;
+  }
+
+  .combobox__list {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 0.4rem);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0.35rem;
+    list-style: none;
+    max-height: 17rem;
+    overflow-y: auto;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-strong, var(--color-border));
+    border-radius: var(--radius-input);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  }
+
+  .combobox__list[hidden] {
+    display: none;
+  }
+
+  .combobox__option {
+    padding: 0.7rem 0.85rem;
+    border-radius: calc(var(--radius-input) - 0.35rem);
+    font-size: 1rem;
+    color: var(--color-text);
+    cursor: pointer;
+    line-height: 1.35;
+  }
+
+  .combobox__option[aria-selected='true'],
+  .combobox__option:hover {
+    background: rgba(126, 232, 168, 0.14);
+  }
+
+  .combobox__option .combobox__meta {
+    display: block;
+    font-size: var(--text-small);
+    color: var(--color-text-subtle);
+  }
+
+  .combobox__empty {
+    padding: 0.7rem 0.85rem;
+    font-size: var(--text-small);
+    color: var(--color-text-subtle);
+  }
+
+  .combobox__state {
+    font-family: var(--font-mono);
+    font-size: var(--text-small);
+    color: var(--color-text-subtle);
+  }
+
+  .combobox__state[hidden] {
+    display: none;
+  }
+
+  .combobox__state.is-error {
+    color: var(--color-danger);
+  }
+
+  .combobox__retry {
+    margin-left: 0.5rem;
+    color: var(--color-accent);
+    background: none;
+    border: none;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+</style>
+
+<script>
+  import type { Principal } from '../../lib/leads';
+
+  const MAX_OPTIONS = 50;
+
+  function optionLabel(p: Principal) {
+    return p.constituency ? `${p.name} — ${p.constituency}` : p.name;
+  }
+
+  function haystack(p: Principal) {
+    return `${p.name} ${p.constituency ?? ''}`.toLowerCase();
+  }
+
+  function setupCombobox(root: HTMLElement) {
+    const endpoint = root.dataset.endpoint || '/api/principals';
+    // Assert non-null (checked at runtime just below) so the nested closures
+    // see non-null types — TS doesn't carry a guard's narrowing into them.
+    const input = root.querySelector<HTMLInputElement>('[data-combobox-input]')!;
+    const list = root.querySelector<HTMLUListElement>('[data-combobox-list]')!;
+    const value = root.querySelector<HTMLInputElement>('[data-combobox-value]')!;
+    const state = root.querySelector<HTMLParagraphElement>('[data-combobox-state]')!;
+    const error = root.querySelector<HTMLParagraphElement>('.field__error');
+    if (!input || !list || !value || !state) return;
+
+    let all: Principal[] = [];
+    let shown: Principal[] = [];
+    let active = -1;
+    let loaded = false;
+
+    function showState(message: string, isError: boolean, withRetry = false) {
+      state.textContent = message;
+      state.classList.toggle('is-error', isError);
+      state.hidden = false;
+      if (withRetry) {
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'combobox__retry';
+        retry.textContent = 'Retry';
+        retry.addEventListener('click', () => load());
+        state.append(' ', retry);
+      }
+    }
+
+    function clearState() {
+      state.textContent = '';
+      state.hidden = true;
+      state.classList.remove('is-error');
+    }
+
+    function clearError() {
+      if (!error) return;
+      error.textContent = '';
+      error.hidden = true;
+      root.classList.remove('field--error');
+      input.removeAttribute('aria-invalid');
+    }
+
+    function close() {
+      list.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+      active = -1;
+    }
+
+    function render(query: string) {
+      const q = query.trim().toLowerCase();
+      shown = (q ? all.filter((p) => haystack(p).includes(q)) : all).slice(0, MAX_OPTIONS);
+      list.innerHTML = '';
+      if (!loaded) return;
+
+      if (shown.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'combobox__empty';
+        li.textContent = 'No matching MP.';
+        list.append(li);
+      } else {
+        shown.forEach((p, i) => {
+          const li = document.createElement('li');
+          li.className = 'combobox__option';
+          li.id = `${input.id}-opt-${i}`;
+          li.setAttribute('role', 'option');
+          li.setAttribute('aria-selected', 'false');
+          li.dataset.id = p.id;
+          li.textContent = p.name;
+          if (p.constituency) {
+            const meta = document.createElement('span');
+            meta.className = 'combobox__meta';
+            meta.textContent = p.constituency + (p.party ? ` · ${p.party}` : '');
+            li.append(meta);
+          }
+          li.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            select(i);
+          });
+          list.append(li);
+        });
+      }
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    function highlight(next: number) {
+      const options = Array.from(list.querySelectorAll<HTMLLIElement>('.combobox__option'));
+      if (options.length === 0) return;
+      active = (next + options.length) % options.length;
+      options.forEach((el, i) => el.setAttribute('aria-selected', i === active ? 'true' : 'false'));
+      const el = options[active];
+      input.setAttribute('aria-activedescendant', el.id);
+      el.scrollIntoView({ block: 'nearest' });
+    }
+
+    function select(index: number) {
+      const p = shown[index];
+      if (!p) return;
+      input.value = optionLabel(p);
+      value.value = p.id;
+      clearError();
+      close();
+      input.removeAttribute('aria-activedescendant');
+    }
+
+    async function load() {
+      clearState();
+      showState('Loading MPs…', false);
+      try {
+        const res = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as Principal[];
+        all = Array.isArray(data) ? data : [];
+        loaded = true;
+        clearState();
+        if (document.activeElement === input) render(input.value);
+      } catch {
+        loaded = false;
+        showState("Couldn't load the MP list.", true, true);
+      }
+    }
+
+    input.addEventListener('focus', () => {
+      if (loaded) render(input.value);
+    });
+
+    input.addEventListener('input', () => {
+      // Editing invalidates any previous selection until one is picked again.
+      value.value = '';
+      clearError();
+      if (loaded) render(input.value);
+    });
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (list.hidden) render(input.value);
+        highlight(active + 1);
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (list.hidden) render(input.value);
+        highlight(active - 1);
+      } else if (event.key === 'Enter') {
+        if (!list.hidden && active >= 0) {
+          event.preventDefault();
+          select(active);
+        }
+      } else if (event.key === 'Escape') {
+        close();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      // Let a click on an option register first (it uses mousedown + preventDefault).
+      window.setTimeout(close, 120);
+    });
+
+    load();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-combobox]').forEach(setupCombobox);
+</script>
