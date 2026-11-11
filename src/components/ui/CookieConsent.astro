@@ -4,7 +4,7 @@ import { PRIVACY_POLICY_URL } from '../../lib/site';
 
 <div id="cookie-consent" class="cookie-consent" role="region" aria-label="Cookie consent" hidden>
   <p class="cookie-consent__text">
-    We'd like to use analytics cookies to see how this site is used.
+    We'd like to use analytics and advertising cookies (Google Analytics, LinkedIn) to see how this site is used and measure our ads.
     <a href={PRIVACY_POLICY_URL} target="_blank" rel="noopener">
       Privacy policy<span class="visually-hidden"> (opens in a new window)</span>
     </a>
@@ -110,7 +110,7 @@ import { PRIVACY_POLICY_URL } from '../../lib/site';
   function clearAnalyticsCookies() {
     document.cookie.split(';').forEach((cookie) => {
       const name = cookie.split('=')[0].trim();
-      if (!name.startsWith('_ga')) return;
+      if (!name.startsWith('_ga') && !name.startsWith('li_') && !name.startsWith('_li')) return;
       const domain = location.hostname.replace(/^www\./, '');
       ['', `; domain=${domain}`, `; domain=.${domain}`].forEach((scope) => {
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/${scope}`;

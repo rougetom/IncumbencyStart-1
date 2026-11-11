@@ -159,7 +159,7 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
 
 <script>
   import { LEAD_FIELDS, validateLead, type LeadField } from '../../lib/leads';
-  import { ANALYTICS_ID, CONSENT_KEY } from '../../lib/site';
+  import { ANALYTICS_ID, CONSENT_KEY, LINKEDIN_CONVERSION_ID } from '../../lib/site';
 
   const form = document.getElementById('claim-form') as HTMLFormElement | null;
   const status = document.getElementById('claim-status');
@@ -287,6 +287,18 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
     return { clientId, sessionId };
   }
 
+  // LinkedIn conversion for a successful submission. lintrk only exists once the visitor has
+  // accepted cookies; before the Insight Tag script finishes loading, calls are queued.
+  function trackLinkedInConversion() {
+    const w = window as any;
+    if (!LINKEDIN_CONVERSION_ID || !consentGranted() || typeof w.lintrk !== 'function') return;
+    try {
+      w.lintrk('track', { conversion_id: Number(LINKEDIN_CONVERSION_ID) });
+    } catch {
+      // Never let tracking break the form.
+    }
+  }
+
   // --- Submit ---------------------------------------------------------------
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -325,6 +337,7 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
       }
 
       succeeded = true;
+      trackLinkedInConversion();
       status.textContent = "Thanks — your account is being activated. We'll be in touch shortly.";
       form.reset();
       syncOther();
