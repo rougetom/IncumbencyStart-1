@@ -11,5 +11,11 @@ export const LINKEDIN_PARTNER_ID = '10375188';
  */
 export const LINKEDIN_CONVERSION_ID = '30640108';
 
+/** X (Twitter) base pixel id. Loaded only after the visitor accepts cookies. */
+export const X_PIXEL_ID = 'riwug';
+
+/** X event id for a successful sign-up. Set to '' to stop sending it. */
+export const X_SIGNUP_EVENT_ID = 'tw-riwug-rix6n';
+
 /** localStorage key holding the visitor's cookie choice: 'granted' or 'denied'. */
 export const CONSENT_KEY = 'cookie-consent';

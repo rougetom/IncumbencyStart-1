@@ -166,7 +166,7 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
 
 <script>
   import { LEAD_FIELDS, validateLead, type LeadField } from '../../lib/leads';
-  import { ANALYTICS_ID, CONSENT_KEY, LINKEDIN_CONVERSION_ID } from '../../lib/site';
+  import { ANALYTICS_ID, CONSENT_KEY, LINKEDIN_CONVERSION_ID, X_SIGNUP_EVENT_ID } from '../../lib/site';
 
   const form = document.getElementById('claim-form') as HTMLFormElement | null;
   const status = document.getElementById('claim-status');
@@ -338,6 +338,17 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
     }
   }
 
+  // X sign-up event, same rules as LinkedIn: only once cookies are accepted.
+  function trackXSignup() {
+    const w = window as any;
+    if (!X_SIGNUP_EVENT_ID || !consentGranted() || typeof w.twq !== 'function') return;
+    try {
+      w.twq('event', X_SIGNUP_EVENT_ID, {});
+    } catch {
+      // Never let tracking break the form.
+    }
+  }
+
   // --- Submit ---------------------------------------------------------------
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -377,6 +388,7 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
 
       succeeded = true;
       trackLinkedInConversion();
+      trackXSignup();
       status.textContent = "Thanks — your account is being activated. We'll be in touch shortly.";
       form.reset();
       syncOther();
