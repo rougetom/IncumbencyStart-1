@@ -4,7 +4,8 @@ Astro landing page where Parliamentary staffers activate their Incumbency.AI acc
 
 - **MP list** — the "MP's office" picker is a searchable combobox populated from the CRM's public principals endpoint, proxied server-side through `src/pages/api/principals.ts` so the browser never calls the CRM directly.
 - **Lead form** — posts to `src/pages/api/claim.ts`, which validates, drops bot submissions via a honeypot, then sends a **signed** `POST` to the CRM lead webhook (`{CRM_BASE_URL}/api/webhooks/leads`). The CRM creates the person, sets their role from the job title, and (because consent is given by submitting) adds them to Mailchimp. Marketing used to go through Resend/Mailchimp from this site; the CRM now owns all of that.
-- **Attribution** — UTM/click parameters are captured into `localStorage` on first landing and sent as `first_touch`/`last_touch`, gated on analytics cookie consent.
+- **Attribution** — the landing URL's UTM parameters (`utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`) are copied into hidden form fields and sent with **every** sign-up as `last_touch`, even when the visitor declines cookies (nothing is stored on their device). With cookie consent, the first landing is also remembered in `localStorage` and sent as `first_touch`, along with the referrer and ad click ids (`gclid`, `fbclid`, `li_fat_id`). The CRM passes the contact's first-touch UTMs on to Mailchimp.
+- **LinkedIn Insight Tag** — loaded with GA once cookies are accepted; a successful sign-up fires a LinkedIn conversion when `LINKEDIN_CONVERSION_ID` is set in `src/lib/site.ts`.
 - **Google Analytics** — each successful submission is recorded server-side as a `generate_lead` event (no personal data), so it counts even when a visitor declines cookies. Optional, via `GA_API_SECRET`.
 - **Vercel Web Analytics** — enabled through the `@astrojs/vercel` adapter.
 - **Style guide** — design tokens and components at `/styleguide` (noindex).

@@ -39,6 +39,13 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
     <input id="field-website" type="text" name="website" tabindex="-1" autocomplete="off" />
   </div>
 
+  <!-- Ad attribution: filled from the landing URL's UTM parameters and sent with every sign-up. -->
+  <input type="hidden" name="utm_source" data-utm />
+  <input type="hidden" name="utm_medium" data-utm />
+  <input type="hidden" name="utm_campaign" data-utm />
+  <input type="hidden" name="utm_term" data-utm />
+  <input type="hidden" name="utm_content" data-utm />
+
   <div class="span-2 claim-form__submit">
     <Button type="submit" icon="arrow-right" block>Activate account</Button>
   </div>
@@ -214,8 +221,13 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
 
   LEAD_FIELDS.forEach((name) => controlFor(name)?.addEventListener('input', () => setFieldError(name, null)));
 
-  // --- Attribution (UTM etc.), gated on analytics consent -------------------
-  const ATTR_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'li_fat_id'];
+  // --- Attribution -----------------------------------------------------------
+  // UTM parameters are read from the landing URL into hidden fields and sent with
+  // every sign-up. That stores nothing on the visitor's device, so it doesn't need
+  // cookie consent. Remembering the first landing across visits (localStorage),
+  // the referrer and ad click ids do, so those stay gated on consent.
+  const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+  const ATTR_KEYS = [...UTM_KEYS, 'gclid', 'fbclid', 'li_fat_id'];
   const FIRST_TOUCH_KEY = 'first_touch';
 
   function consentGranted() {
@@ -226,13 +238,29 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
     }
   }
 
-  function campaignParams() {
+  function campaignParams(keys: string[] = ATTR_KEYS) {
     const params = new URLSearchParams(location.search);
     const out: Record<string, string> = {};
-    for (const key of ATTR_KEYS) {
+    for (const key of keys) {
       const v = params.get(key);
       if (v) out[key] = v;
     }
+    return out;
+  }
+
+  // Fill the hidden UTM fields from the URL. Re-run after form.reset(), which clears them.
+  function fillUtmFields() {
+    const params = campaignParams(UTM_KEYS);
+    form?.querySelectorAll<HTMLInputElement>('input[data-utm]').forEach((input) => {
+      input.value = params[input.name] ?? '';
+    });
+  }
+
+  function utmFields() {
+    const out: Record<string, string> = {};
+    form?.querySelectorAll<HTMLInputElement>('input[data-utm]').forEach((input) => {
+      if (input.value) out[input.name] = input.value;
+    });
     return out;
   }
 
@@ -252,20 +280,31 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
   }
 
   function touches() {
-    if (!consentGranted()) return {};
     const out: { first_touch?: unknown; last_touch?: unknown } = {};
+    const occurred_at = new Date().toISOString();
+
+    if (!consentGranted()) {
+      // Without consent: only the UTMs and the URL they came on.
+      const utms = utmFields();
+      if (Object.keys(utms).length === 0) return out;
+      const query = new URLSearchParams(utms).toString();
+      out.last_touch = { ...utms, landing_url: `${location.origin}${location.pathname}?${query}`, occurred_at };
+      return out;
+    }
+
     try {
       const stored = localStorage.getItem(FIRST_TOUCH_KEY);
       if (stored) out.first_touch = JSON.parse(stored);
     } catch {
       // ignore
     }
-    const last: Record<string, string> = { ...campaignParams(), landing_url: location.href, occurred_at: new Date().toISOString() };
+    const last: Record<string, string> = { ...campaignParams(), ...utmFields(), landing_url: location.href, occurred_at };
     if (document.referrer) last.referrer = document.referrer;
     out.last_touch = last;
     return out;
   }
 
+  fillUtmFields();
   captureFirstTouch();
 
   // --- Google Analytics ids, only for visitors who accepted cookies ---------
@@ -341,6 +380,7 @@ import { JOB_TITLES, OTHER_JOB_TITLE, CONSENT_TEXT } from '../../lib/leads';
       status.textContent = "Thanks — your account is being activated. We'll be in touch shortly.";
       form.reset();
       syncOther();
+      fillUtmFields();
       // Clear the combobox's visible text and hidden id, which form.reset misses.
       const mpInput = document.getElementById('field-principal_id-input') as HTMLInputElement | null;
       const mpValue = document.getElementById('field-principal_id-value') as HTMLInputElement | null;
