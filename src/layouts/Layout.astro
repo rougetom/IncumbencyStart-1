@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 import CookieConsent from '../components/ui/CookieConsent.astro';
-import { ANALYTICS_ID, CONSENT_KEY } from '../lib/site';
+import { ANALYTICS_ID, CONSENT_KEY, LINKEDIN_PARTNER_ID, X_PIXEL_ID } from '../lib/site';
 
 interface Props {
   title: string;
@@ -30,8 +30,11 @@ const imageUrl = new URL(image, Astro.url.origin).href;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Google tag (gtag.js): only loaded once the visitor accepts cookies (see CookieConsent). -->
-    <script is:inline define:vars={{ ANALYTICS_ID, CONSENT_KEY }}>
+    <!--
+      Google tag (gtag.js), LinkedIn Insight Tag and X pixel: only loaded once the visitor accepts cookies (see CookieConsent).
+      LinkedIn's <noscript> pixel is deliberately left out: without JavaScript there is no way to ask for consent.
+    -->
+    <script is:inline define:vars={{ ANALYTICS_ID, CONSENT_KEY, LINKEDIN_PARTNER_ID, X_PIXEL_ID }}>
       window.dataLayer = window.dataLayer || [];
       window.gtag = function () {
         dataLayer.push(arguments);
@@ -45,6 +48,35 @@ const imageUrl = new URL(image, Astro.url.origin).href;
         document.head.appendChild(tag);
         gtag('js', new Date());
         gtag('config', ANALYTICS_ID);
+
+        // LinkedIn Insight Tag
+        window._linkedin_partner_id = LINKEDIN_PARTNER_ID;
+        window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
+        window._linkedin_data_partner_ids.push(LINKEDIN_PARTNER_ID);
+        if (!window.lintrk) {
+          window.lintrk = function (a, b) {
+            window.lintrk.q.push([a, b]);
+          };
+          window.lintrk.q = [];
+        }
+        const li = document.createElement('script');
+        li.async = true;
+        li.src = 'https://snap.licdn.com/li.lms-analytics/insight.min.js';
+        document.head.appendChild(li);
+
+        // X (Twitter) pixel
+        if (!window.twq) {
+          const twq = (window.twq = function () {
+            twq.exe ? twq.exe.apply(twq, arguments) : twq.queue.push(arguments);
+          });
+          twq.version = '1.1';
+          twq.queue = [];
+          const tw = document.createElement('script');
+          tw.async = true;
+          tw.src = 'https://static.ads-twitter.com/uwt.js';
+          document.head.appendChild(tw);
+        }
+        window.twq('config', X_PIXEL_ID);
       };
       try {
         if (localStorage.getItem(CONSENT_KEY) === 'granted') window.loadAnalytics();
