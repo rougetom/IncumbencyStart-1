@@ -1,5 +1,7 @@
 # Incumbency.AI — landing page
 
+> **Redirected.** Every page on start.incumbency.ai now sends visitors to **https://www.incumbency.ai/activate** with a 302, keeping the query string (so ad UTMs carry over). This is done in `src/middleware.ts`. `/api/*` is not redirected, so anything still calling `/api/claim` or `/api/principals` keeps working. To bring the landing page back, delete `src/middleware.ts` and redeploy. The page code below is unchanged.
+
 Astro landing page where Parliamentary staffers activate their Incumbency.AI account (and claim a free anti-theft laptop bag). Each submission is sent, signed, from the site's server to the Incumbency.AI CRM's lead webhook, where it becomes a staff member on the chosen MP's office.
 
 - **MP list** — the "MP's office" picker is a searchable combobox populated from the CRM's public principals endpoint, proxied server-side through `src/pages/api/principals.ts` so the browser never calls the CRM directly.
